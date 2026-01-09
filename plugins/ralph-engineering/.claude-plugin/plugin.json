@@ -1,0 +1,19 @@
+{
+  "name": "ralph-engineering",
+  "version": "1.0.10",
+  "description": "Ralph engineering tools for Claude Code.",
+  "author": {
+    "name": "Magnus Bjelkenhed",
+    "email": "bjelkenhed@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/bjelkenhed/ralph-engineering",
+  "repository": "https://github.com/bjelkenhed/ralph-engineering",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "engineering",
+    "productivity",
+    "workflow"
+  ]
+}

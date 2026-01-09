@@ -1,0 +1,29 @@
+{
+  "name": "ralph-marketplace",
+  "owner": {
+    "name": "Ralph",
+    "url": "https://github.com/bjelkenhed"
+  },
+  "metadata": {
+    "description": "Ralph Engineering plugin marketplace for Claude Code",
+    "version": "1.0.1"
+  },
+  "plugins": [
+    {
+      "name": "ralph-engineering",
+      "description": "Ralph engineering tools for Claude Code.",
+      "version": "1.0.10",
+      "author": {
+        "name": "Magnus Bjelkenhed",
+        "email": "bjelkenhed@gmail.com"
+      },
+      "homepage": "https://github.com/bjelkenhed/ralph-engineering",
+      "tags": [
+        "engineering",
+        "productivity",
+        "workflow"
+      ],
+      "source": "./plugins/ralph-engineering"
+    }
+  ]
+}
