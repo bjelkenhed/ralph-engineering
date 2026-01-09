@@ -1,0 +1,29 @@
+{
+  "name": "Ralph Loop Safe Environment",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "npm install -g pnpm && echo 'Environment ready for Ralph Loop'",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "RALPH_SAFE_MODE": "true"
+  },
+  "mounts": [],
+  "forwardPorts": [3000, 8080, 5173]
+}

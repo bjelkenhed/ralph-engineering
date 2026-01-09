@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Bash(git *)",
+      "Bash(pnpm *)",
+      "Bash(npm *)",
+      "Bash(yarn *)",
+      "Bash(npx *)",
+      "Bash(tsc *)",
+      "Bash(eslint *)",
+      "Bash(prettier *)",
+      "Bash(vitest *)",
+      "Bash(jest *)",
+      "Bash(cargo *)",
+      "Bash(make *)",
+      "Bash(pip *)",
+      "Bash(poetry *)",
+      "Bash(uv *)",
+      "Read(**/*)",
+      "Edit(**/*)",
+      "Write(**/*)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.env.local)",
+      "Read(.env.production)",
+      "WebFetch"
+    ]
+  }
+}
