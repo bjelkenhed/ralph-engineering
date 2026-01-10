@@ -9,8 +9,8 @@ set -euo pipefail
 readonly RALPH_STATE_FILE=".claude/ralph-loop.local.md"
 
 # Output functions
-approve() { echo '{"decision": "allow"}'; exit 0; }
-deny() { printf '{"decision": "deny", "reason": "%s"}\n' "$1"; exit 0; }
+approve() { echo '{"decision": "approve"}'; exit 0; }
+deny() { printf '{"decision": "block", "reason": "%s"}\n' "$1"; exit 0; }
 pass() { echo '{"decision": "pass"}'; exit 0; }
 
 # Read and parse input
