@@ -11,7 +11,8 @@ TEMPLATE_FILE="$SCRIPT_DIR/../templates/settings.ralph-loop.json"
 
 # Parse arguments
 PROMPT_PARTS=()
-MAX_ITERATIONS=0
+MAX_ITERATIONS=20
+MAX_ITERATIONS_EXPLICIT=false  # Track if user explicitly set --max-iterations
 COMPLETION_PROMISE="null"
 PRD_FILE="auto"  # auto, explicit path, or NONE
 
@@ -29,7 +30,8 @@ ARGUMENTS:
   PROMPT...    Initial prompt to start the loop (can be multiple words without quotes)
 
 OPTIONS:
-  --max-iterations <n>           Maximum iterations before auto-stop (default: unlimited)
+  --max-iterations <n>           Maximum iterations before auto-stop (default: 20,
+                                 or PRD feature count if greater)
   --completion-promise '<text>'  Promise phrase (USE QUOTES for multi-word)
   --prd <file|NONE>              PRD file path (default: auto-detect ./plans/prd.json)
   -h, --help                     Show this help message
@@ -93,6 +95,7 @@ HELP_EOF
         exit 1
       fi
       MAX_ITERATIONS="$2"
+      MAX_ITERATIONS_EXPLICIT=true
       shift 2
       ;;
     --completion-promise)
@@ -158,6 +161,16 @@ if [[ -n "$RESOLVED_PRD_FILE" ]] && [[ -z "$PROMPT" ]]; then
   PROMPT="Implement features from the PRD file at $RESOLVED_PRD_FILE"
   if [[ "$COMPLETION_PROMISE" == "null" ]]; then
     COMPLETION_PROMISE="COMPLETE"
+  fi
+fi
+
+# If max-iterations not explicitly set and PRD has more features than default, use feature count
+if [[ "$MAX_ITERATIONS_EXPLICIT" == "false" ]] && [[ -n "$RESOLVED_PRD_FILE" ]]; then
+  if command -v jq &> /dev/null; then
+    PRD_FEATURE_COUNT=$(jq '.features | length' "$RESOLVED_PRD_FILE" 2>/dev/null || echo "0")
+    if [[ "$PRD_FEATURE_COUNT" =~ ^[0-9]+$ ]] && [[ "$PRD_FEATURE_COUNT" -gt "$MAX_ITERATIONS" ]]; then
+      MAX_ITERATIONS="$PRD_FEATURE_COUNT"
+    fi
   fi
 fi
 

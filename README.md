@@ -1,302 +1,356 @@
 # Ralph Engineering Plugin
 
-A starter Claude Code plugin for engineering workflows.
+A Claude Code plugin for autonomous, iterative software development using Product Requirements Documents (PRDs).
 
 ## Installation
-
-### Option 1: One-Command Installation
 
 ```bash
 npx claude-plugins install @bjelkenhed/ralph-engineering
 ```
 
-### Option 2: Manual Installation
+Or manually:
 
-1. Add the marketplace:
 ```
 /plugin marketplace add https://github.com/bjelkenhed/ralph-engineering
-```
-
-2. Install the plugin:
-```
 /plugin install ralph-engineering
 ```
 
-## Updating
+## Core Workflow: PRD-Driven Development
 
-To update the plugin to the latest version:
+Ralph Engineering provides a two-step workflow for autonomous development:
 
 ```
-/plugin marketplace update
+┌─────────────────────┐      ┌─────────────────────┐      ┌─────────────────────┐
+│  1. Generate PRD    │ ──▶  │  2. Run Ralph Loop  │ ──▶  │  3. Complete!       │
+│  /ralph-prd         │      │  /ralph-loop        │      │  All features pass  │
+└─────────────────────┘      └─────────────────────┘      └─────────────────────┘
 ```
 
-This will fetch the latest versions from all configured marketplaces and update installed plugins.
+### Step 1: Generate a PRD with `/ralph-prd`
 
-## Features
+The PRD wizard creates a structured JSON document with testable feature requirements:
 
-### Commands
+```bash
+/ralph-prd "Create a todo app inspired by Things 3"
+```
 
-- `/ralph-engineering:plan` - Develops a refined spec for a new feature through multiple iterations. Pass a requirements document as an argument, and the command will:
-  1. Ask clarifying questions to reduce ambiguity
-  2. Fetch relevant documentation using the Docs Fetcher sub-agent
-  3. Create an initial spec using the Application Architect sub-agent
-  4. Refine the spec through Code Reviewer feedback
-  5. Iterate through three spec versions with reviews
-  6. Notify you when the final spec is ready for review
+The wizard will:
 
-- `/ralph-engineering:ralph-loop` - Start an iterative development loop (based on [Ralph Wiggum](https://github.com/anthropics/claude-code/tree/main/plugins/ralph-wiggum)). The loop feeds the same prompt back when Claude tries to exit, allowing autonomous iteration until completion criteria are met.
+1. Ask clarifying questions about your project
+2. Generate features with acceptance criteria
+3. Let you review and refine the requirements
+4. Save the PRD to `./plans/prd.json`
 
-  **Usage:**
-  ```
-  /ralph-loop "<prompt>" --max-iterations <n> --completion-promise "<text>"
-  ```
+**Example PRD output:**
 
-  **Options:**
-  - `--max-iterations <n>` - Stop after N iterations (default: unlimited)
-  - `--completion-promise <text>` - Phrase that signals completion
+```json
+{
+  "name": "Todo List Application",
+  "features": [
+    {
+      "id": "feat_001",
+      "category": "functional",
+      "description": "User can create a new todo item",
+      "steps": [
+        "Navigate to the main todo list view",
+        "Click the 'Add Todo' button",
+        "Enter a todo title",
+        "Verify the new todo appears in the list"
+      ],
+      "passes": false
+    }
+  ]
+}
+```
 
-  **Example:**
-  ```
-  /ralph-loop "Build a REST API for todos. Requirements: CRUD operations, input validation, tests. Output <promise>COMPLETE</promise> when done." --completion-promise "COMPLETE" --max-iterations 50
-  ```
+**Key principles:**
 
-  **Best for:** Tasks with clear success criteria, TDD workflows, greenfield projects, tasks with automatic verification (tests, linters).
+- Features describe **user actions**, not implementation details
+- Each feature has explicit **verification steps**
+- The `passes` field is the only thing that can change during development
+- Features cannot be added, removed, or modified once finalized
 
-- `/ralph-engineering:cancel-ralph` - Cancel the active Ralph Wiggum loop
+### Step 2: Run the Ralph Loop with `/ralph-loop`
 
-## Ralph Loop - Technical Details
+The Ralph loop autonomously implements PRD features one at a time:
 
-The Ralph loop is a self-referential iterative development loop inspired by [Ralph Wiggum](https://github.com/anthropics/claude-code/tree/main/plugins/ralph-wiggum). It works by intercepting Claude's exit attempts and feeding the same prompt back, allowing Claude to see its previous work in files and iteratively improve on the task.
+```bash
+/ralph-loop
+```
 
-### Architecture
+When a PRD exists at `./plans/prd.json`, Ralph automatically:
 
-The system consists of four components:
+1. Creates a feature branch
+2. Reads the PRD and selects the next feature to implement
+3. Implements the feature
+4. Runs tests and type checking
+5. Updates `passes: false` → `passes: true` in the PRD
+6. Commits the change
+7. Repeats until all features pass
 
-| File | Purpose |
-|------|---------|
-| `plugins/ralph-engineering/scripts/setup-ralph-loop.sh` | Initialization script that creates state file |
-| `plugins/ralph-engineering/hooks/stop-hook.sh` | Exit interception hook that controls loop continuation |
-| `plugins/ralph-engineering/hooks/hooks.json` | Registers the stop hook with Claude Code |
-| `.claude/ralph-loop.local.md` | Runtime state file (generated, not committed) |
+**Each iteration follows this cycle:**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     RALPH LOOP ITERATION                     │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. Read PRD → Find features with passes: false              │
+│                           │                                  │
+│                           ▼                                  │
+│  2. Select ONE feature based on dependencies                 │
+│                           │                                  │
+│                           ▼                                  │
+│  3. Implement the feature                                    │
+│                           │                                  │
+│                           ▼                                  │
+│  4. Verify: pnpm typecheck && pnpm test                     │
+│                           │                                  │
+│                           ▼                                  │
+│  5. Update PRD: passes: true                                 │
+│                           │                                  │
+│                           ▼                                  │
+│  6. Commit: git commit -m "feat: <description>"              │
+│                           │                                  │
+│                           ▼                                  │
+│  7. All features done? ──┬── No → Continue loop              │
+│                          │                                   │
+│                          └── Yes → Exit with COMPLETE        │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## How the Ralph Loop Works
+
+### The Self-Referential Loop
+
+Ralph works by intercepting Claude's exit attempts. When Claude tries to exit, the stop hook:
+
+1. Checks if the PRD has remaining incomplete features
+2. If incomplete, feeds the same prompt back to Claude
+3. Claude sees its previous work in files and continues
+
+**Key insight:** Claude's conversation context resets each iteration, but all files persist. Claude "remembers" by reading:
+
+- Code it wrote in previous iterations
+- Test results showing what works
+- Git history documenting progress
+- The PRD showing which features are complete
+
+### Progress Tracking
+
+At the end of each iteration, Claude outputs a `<progress>` summary:
+
+```
+<progress>
+- Implemented login form and JWT authentication
+- Tests: 15/15 passing, typecheck clean
+- Next: dashboard component (feat_003)
+</progress>
+```
+
+This progress is captured and shown to Claude in the next iteration, helping it quickly get oriented without re-exploring the codebase.
+
+### Completion Detection
+
+The loop ends when:
+
+- **All PRD features pass** - The hook checks if all `passes` fields are `true`
+- **Max iterations reached** - Safety limit if specified
+- **Completion promise detected** - Claude outputs `<promise>COMPLETE</promise>`
+
+## Command Reference
+
+### `/ralph-prd [description]`
+
+Interactive wizard to generate a PRD.
+
+```bash
+# Start with a project description
+/ralph-prd "An e-commerce checkout flow"
+
+# Or start interactively
+/ralph-prd
+```
+
+### `/ralph-loop [options]`
+
+Start the autonomous development loop.
+
+```bash
+# With a PRD (auto-detected at ./plans/prd.json)
+/ralph-loop
+
+# With explicit PRD path
+/ralph-loop --prd ./plans/my-feature.json
+
+# Without a PRD (provide a prompt)
+/ralph-loop "Build a REST API for todos" --completion-promise "DONE"
+
+# With safety limits
+/ralph-loop --max-iterations 20
+```
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--prd <file>` | PRD file path (default: auto-detect `./plans/prd.json`) |
+| `--prd NONE` | Disable PRD auto-detection |
+| `--max-iterations <n>` | Stop after N iterations (default: unlimited) |
+| `--completion-promise <text>` | Phrase that signals completion |
+
+### `/cancel-ralph`
+
+Cancel an active Ralph loop.
+
+```bash
+/cancel-ralph
+```
+
+## Running Without a PRD
+
+Ralph can also work without a PRD for ad-hoc tasks:
+
+```bash
+/ralph-loop "Fix the authentication bug and ensure all tests pass" \
+  --completion-promise "All tests passing" \
+  --max-iterations 10
+```
+
+In this mode:
+
+- You provide a prompt describing the task
+- The completion promise defines when to stop
+- Claude iterates until the promise is genuinely true
+
+**Best for:** Bug fixes, refactoring, tasks with clear completion criteria.
+
+## Technical Architecture
+
+```
+ralph-engineering/
+├── plugins/ralph-engineering/
+│   ├── commands/
+│   │   ├── ralph-prd.md      # PRD generation wizard
+│   │   ├── ralph-loop.md     # Loop initialization command
+│   │   └── cancel-ralph.md   # Cancel active loop
+│   ├── scripts/
+│   │   └── setup-ralph-loop.sh   # Creates state file
+│   └── hooks/
+│       ├── hooks.json            # Registers stop hook
+│       └── stop-hook.sh          # Exit interception logic
+└── .claude/
+    ├── ralph-loop.local.md       # Runtime state (generated)
+    └── ralph-progress.txt        # Progress log (generated)
+```
 
 ### State File Format
 
-The loop state is stored as a markdown file with YAML frontmatter:
+The loop state is stored as markdown with YAML frontmatter:
 
 ```yaml
 ---
 active: true
-iteration: 1
-max_iterations: 10        # 0 = unlimited
-completion_promise: "DONE"  # or null
+iteration: 3
+max_iterations: 0
+completion_promise: "COMPLETE"
+prd_file: "./plans/prd.json"
 started_at: "2024-01-15T10:30:00Z"
 ---
-
-Build a REST API for todos with CRUD operations...
+Implement features from the PRD file at ./plans/prd.json
 ```
-
-### Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  User runs: /ralph-loop "Build API" --max-iterations 10         │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  setup-ralph-loop.sh creates .claude/ralph-loop.local.md        │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Claude works on the task, creating/modifying files             │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Claude tries to exit (task appears complete)                   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  stop-hook.sh intercepts exit attempt                           │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-              ┌─────────────────┴─────────────────┐
-              ▼                                   ▼
-┌──────────────────────────┐        ┌──────────────────────────┐
-│   Continue Loop:         │        │   Exit Loop:             │
-│   • max not reached      │        │   • max_iterations hit   │
-│   • no promise detected  │        │   • promise detected     │
-└──────────────────────────┘        └──────────────────────────┘
-              │                                   │
-              ▼                                   ▼
-┌──────────────────────────┐        ┌──────────────────────────┐
-│  Output JSON:            │        │  Remove state file       │
-│  {                       │        │  Allow normal exit       │
-│    decision: "block",    │        └──────────────────────────┘
-│    reason: <prompt>      │
-│  }                       │
-│  Increment iteration     │
-└──────────────────────────┘
-              │
-              └──────► (Loop back to Claude working)
-```
-
-### Stop Hook Logic
-
-The `stop-hook.sh` script performs these checks in order:
-
-1. **State file check** - If `.claude/ralph-loop.local.md` doesn't exist, allow exit
-2. **Parse frontmatter** - Extract iteration, max_iterations, completion_promise
-3. **Validate state** - Ensure iteration/max_iterations are valid numbers (corrupted state stops the loop)
-4. **Max iterations check** - If `iteration >= max_iterations` (and max > 0), stop the loop
-5. **Read transcript** - Get last assistant output from the transcript file
-6. **Promise detection** - Search for `<promise>TEXT</promise>` tags in output
-7. **Decision output** - Either allow exit or output `{decision: "block", reason: <prompt>}`
-
-### Progress Tracking Between Iterations
-
-Ralph uses a **file-based progress tracking** approach rather than storing progress in memory or the state file. This is the key insight that makes the loop work:
-
-**What gets preserved:**
-- All files Claude creates or modifies (code, tests, configs, docs)
-- Git commits made during previous iterations
-- Build artifacts, test results, and logs
-- Any notes Claude writes to track its own progress
-
-**What gets reset:**
-- Claude's conversation context (each iteration starts fresh)
-- In-memory state (variables, temporary data)
-
-**How Claude "remembers":**
-
-1. **Read existing files** - At the start of each iteration, Claude reads the codebase and sees work from previous iterations
-2. **Check test results** - Running tests shows what's working and what's broken
-3. **Review git history** - Commits document what was done and why
-4. **Progress files** - Claude can create files like `PROGRESS.md` or `TODO.md` to leave notes for itself
-
-**Example iteration flow:**
-
-```
-Iteration 1: Claude creates src/api.ts with basic structure
-Iteration 2: Claude reads src/api.ts, adds validation
-Iteration 3: Claude reads src/api.ts, sees validation, adds tests
-Iteration 4: Claude runs tests, sees 2 failures, fixes them
-Iteration 5: All tests pass → outputs <promise>COMPLETE</promise>
-```
-
-**Best practice - Self-documenting progress:**
-
-Include instructions in your prompt for Claude to track its own progress:
-
-```
-Build a REST API. After each iteration, update PROGRESS.md with:
-- What was completed
-- What still needs work
-- Any blockers or issues found
-```
-
-This creates a feedback loop where Claude can efficiently pick up where it left off.
-
-### Completion Promise
-
-The completion promise is a safety mechanism that ensures Claude only exits when a condition is genuinely true:
-
-- **Setting**: `--completion-promise "All tests passing"`
-- **Completing**: Claude must output `<promise>All tests passing</promise>`
-- **Integrity**: Claude is instructed to NEVER output a false promise to escape
-- **Matching**: Uses exact string matching (not pattern matching)
-
-This prevents premature exits when Claude thinks it's done but hasn't actually met the criteria.
 
 ### Monitoring
 
 ```bash
-# View current state
-head -10 .claude/ralph-loop.local.md
-
-# Check current iteration
+# View current iteration
 grep '^iteration:' .claude/ralph-loop.local.md
 
-# Cancel the loop manually
-/cancel-ralph
+# View progress log
+cat .claude/ralph-progress.txt
+
+# Check PRD status
+jq '.features | map(select(.passes == true)) | length' ./plans/prd.json
 ```
 
-### Agents
+## Best Practices
 
-- `code-reviewer` - Reviews code for quality and best practices
-- `docs-fetcher-summarizer` - Fetches and summarizes documentation from external sources
-- `meta-agent` - Generates new Claude Code sub-agent configurations
+### Writing Good PRDs
 
-## Project Structure
+1. **Describe user actions, not implementation:**
 
-```
-ralph-engineering/
-├── .claude-plugin/
-│   └── marketplace.json       # Marketplace configuration
-├── plugins/
-│   └── ralph-engineering/
-│       ├── .claude-plugin/
-│       │   └── plugin.json    # Plugin metadata
-│       ├── agents/            # Agent definitions
-│       ├── commands/          # Slash commands
-│       └── skills/            # Reusable skills
-├── CLAUDE.md                  # Claude-specific documentation
-└── README.md                  # This file
-```
+   - ✓ "User can filter todos by status"
+   - ✗ "Implement a filterTodos() function"
 
-## Creating New Components
+2. **Make features independently testable:**
 
-### Adding a Command
+   - ✓ "User can create a new todo item with a title"
+   - ✗ "Todo CRUD operations work"
 
-Create a new `.md` file in `plugins/ralph-engineering/commands/`:
+3. **Include 2-5 verification steps per feature**
 
-```markdown
-# Command Name
+4. **Order by dependencies:** Core functionality before polish
 
-Description of what this command does.
+### Running Effective Loops
 
-## Usage
+1. **Always set `--max-iterations`** for safety
+2. **Start with a clean git state** (no uncommitted changes)
+3. **Have tests and type checking configured** (`pnpm test`, `pnpm typecheck`)
+4. **Monitor progress** via the progress log
 
-How to use the command and what it expects.
+## Running Autonomously (Without Permission Prompts)
 
-## Behavior
+By default, Claude Code prompts for permission before running commands. For true autonomous operation, you have several options:
 
-What the command does step by step.
+### Quick Start (Recommended)
+
+Copy the settings template to your project and run with `dontAsk` mode:
+
+```bash
+# Copy the settings template
+cp plugins/ralph-engineering/templates/settings.ralph-loop.json .claude/settings.json
+
+# Run Claude Code with dontAsk mode
+claude --permission-mode dontAsk
 ```
 
-### Adding a Skill
+### Option 1: Settings-Based Allowlist
 
-Create a new directory in `plugins/ralph-engineering/skills/` with a `SKILL.md` file:
+The settings template pre-approves safe commands (git, pnpm, npm, file operations) and blocks dangerous ones (sudo, curl, rm -rf). Customize `.claude/settings.json` for your needs.
 
-```markdown
-# skill-name
+### Option 2: PreToolUse Hook (Enabled by Default)
 
-Description of when this skill should be used.
+This plugin includes a PreToolUse hook that auto-approves commands when the ralph-loop is active. The hook only approves commands matching the loop's allowed-tools.
 
-## Instructions
+### Option 3: Devcontainer (Maximum Safety)
 
-Detailed instructions for how Claude should use this skill.
+For `--dangerously-skip-permissions` with full isolation:
+
+```bash
+# Copy the devcontainer template
+cp -r plugins/ralph-engineering/templates/.devcontainer .devcontainer
+
+# Open in VS Code, then "Reopen in Container"
+# Inside the container:
+claude --dangerously-skip-permissions
 ```
 
-### Adding an Agent
+### Option 4: Skip Permissions (Use with Caution)
 
-Create a new `.md` file in `plugins/ralph-engineering/agents/`:
-
-```markdown
-# Agent Name
-
-Description of the agent's purpose and capabilities.
-
-## Tools
-
-What tools this agent has access to.
-
-## Behavior
-
-How the agent should behave.
+```bash
+claude --dangerously-skip-permissions
 ```
+
+Only use this in isolated environments (devcontainers, CI/CD, sandboxed VMs).
+
+### Full Documentation
+
+See [docs/PERMISSIONS.md](plugins/ralph-engineering/docs/PERMISSIONS.md) for:
+
+- All permission configuration options
+- Pattern syntax for allowlists
+- Troubleshooting guide
+- Security best practices
 
 ## License
 

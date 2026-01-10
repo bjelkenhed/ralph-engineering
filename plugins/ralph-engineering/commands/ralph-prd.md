@@ -14,6 +14,18 @@ Convert my feature requirements into structured PRD items.
 Each item should have: category, description, steps to verify, and passes: false.
 Format as JSON. Be specific about acceptance criteria.
 
+## Architecture Guidelines
+
+Before generating features, read the architecture guidelines:
+- **File**: `${CLAUDE_PLUGIN_ROOT}/templates/architecture.md`
+
+These guidelines define the recommended technology stack (TypeScript, Next.js, React 19, Tailwind, shadcn/ui, Zustand, Vercel AI SDK) and design principles. Use these as defaults unless the user explicitly specifies different technologies.
+
+When generating features:
+- UI features should align with shadcn/ui component patterns
+- Performance features should consider Next.js optimizations
+- AI features should reference Vercel AI SDK patterns
+
 ## Background
 
 This approach is based on Anthropic's research on effective harnesses for long-running agents. Key principles:

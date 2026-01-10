@@ -47,6 +47,12 @@ Focus ONLY on the selected feature:
 - Follow the verification steps as your implementation guide
 - Do NOT work on other features in this iteration
 
+**Architecture Guidelines**: Read `${CLAUDE_PLUGIN_ROOT}/templates/architecture.md` for recommended technology stack and patterns:
+- Use Node.js or Bun runtime, TypeScript, Next.js (latest), React 19, Tailwind, shadcn/ui by default
+- Use Zustand for client-side state when needed
+- Use Vercel AI SDK for LLM/AI features
+- Follow the design principles unless the project uses different technologies
+
 ### 5. Verify with Tests and Type Checking
 
 Before marking the feature complete, verify:

@@ -1,6 +1,17 @@
 {
-  "description": "Ralph Wiggum plugin stop hook for self-referential loops",
+  "description": "Ralph Wiggum plugin hooks for self-referential loops and autonomous execution",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Write|Edit|MultiEdit|Glob|Grep|LS|Task|TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash ${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
