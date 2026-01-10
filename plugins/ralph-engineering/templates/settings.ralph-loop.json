@@ -43,6 +43,14 @@
       "Read(.env.*)",
       "Read(.env.local)",
       "Read(.env.production)",
+      "Bash(cat:*)",
+      "Bash(git: *)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(mv:*)",
+      "Bash(git branch:*)",
+      "Bash(bun:*)",
       "WebFetch"
     ]
   }
