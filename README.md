@@ -22,16 +22,16 @@ Ralph Engineering provides a two-step workflow for autonomous development:
 ```
 ┌─────────────────────┐      ┌─────────────────────┐      ┌─────────────────────┐
 │  1. Generate PRD    │ ──▶  │  2. Run Ralph Loop  │ ──▶  │  3. Complete!       │
-│  /ralph-prd         │      │  /ralph-loop        │      │  All features pass  │
+│  /ralph-engineering:ralph-prd         │      │  /ralph-engineering:ralph-loop        │      │  All features pass  │
 └─────────────────────┘      └─────────────────────┘      └─────────────────────┘
 ```
 
-### Step 1: Generate a PRD with `/ralph-prd`
+### Step 1: Generate a PRD with `/ralph-engineering:ralph-prd`
 
 The PRD wizard creates a structured JSON document with testable feature requirements:
 
 ```bash
-/ralph-prd "Create a todo app inspired by Things 3"
+/ralph-engineering:ralph-prd "Create a todo app inspired by Things 3"
 ```
 
 The wizard will:
@@ -70,12 +70,12 @@ The wizard will:
 - The `passes` field is the only thing that can change during development
 - Features cannot be added, removed, or modified once finalized
 
-### Step 2: Run the Ralph Loop with `/ralph-loop`
+### Step 2: Run the Ralph Loop with `/ralph-engineering:ralph-loop`
 
 The Ralph loop autonomously implements PRD features one at a time:
 
 ```bash
-/ralph-loop
+/ralph-engineering:ralph-loop
 ```
 
 When a PRD exists at `./plans/prd.json`, Ralph automatically:
@@ -161,34 +161,34 @@ The loop ends when:
 
 ## Command Reference
 
-### `/ralph-prd [description]`
+### `/ralph-engineering:ralph-prd [description]`
 
 Interactive wizard to generate a PRD.
 
 ```bash
 # Start with a project description
-/ralph-prd "An e-commerce checkout flow"
+/ralph-engineering:ralph-prd "An e-commerce checkout flow"
 
 # Or start interactively
-/ralph-prd
+/ralph-engineering:ralph-prd
 ```
 
-### `/ralph-loop [options]`
+### `/ralph-engineering:ralph-loop [options]`
 
 Start the autonomous development loop.
 
 ```bash
 # With a PRD (auto-detected at ./plans/prd.json)
-/ralph-loop
+/ralph-engineering:ralph-loop
 
 # With explicit PRD path
-/ralph-loop --prd ./plans/my-feature.json
+/ralph-engineering:ralph-loop --prd ./plans/my-feature.json
 
 # Without a PRD (provide a prompt)
-/ralph-loop "Build a REST API for todos" --completion-promise "DONE"
+/ralph-engineering:ralph-loop "Build a REST API for todos" --completion-promise "DONE"
 
 # With safety limits
-/ralph-loop --max-iterations 20
+/ralph-engineering:ralph-loop --max-iterations 20
 ```
 
 **Options:**
@@ -199,12 +199,12 @@ Start the autonomous development loop.
 | `--max-iterations <n>` | Stop after N iterations (default: unlimited) |
 | `--completion-promise <text>` | Phrase that signals completion |
 
-### `/cancel-ralph`
+### `/ralph-engineering:cancel-ralph`
 
 Cancel an active Ralph loop.
 
 ```bash
-/cancel-ralph
+/ralph-engineering:cancel-ralph
 ```
 
 ## Running Without a PRD
@@ -212,7 +212,7 @@ Cancel an active Ralph loop.
 Ralph can also work without a PRD for ad-hoc tasks:
 
 ```bash
-/ralph-loop "Fix the authentication bug and ensure all tests pass" \
+/ralph-engineering:ralph-loop "Fix the authentication bug and ensure all tests pass" \
   --completion-promise "All tests passing" \
   --max-iterations 10
 ```
@@ -264,7 +264,7 @@ Implement features from the PRD file at ./plans/prd.json
 
 ```bash
 # View current iteration
-grep '^iteration:' .claude/ralph-loop.local.md
+grep '^iteration:' .claude/ralph-engineering:ralph-loop.local.md
 
 # View progress log
 cat .claude/ralph-progress.txt
