@@ -18,6 +18,20 @@ INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 
 [[ -z "$TOOL_NAME" ]] && pass
+
+# Always approve safe operations for ralph-prd (even without ralph-session active)
+if [[ "$TOOL_NAME" == "Bash" ]]; then
+    COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+    # Approve mkdir commands unconditionally (safe operation)
+    [[ "$COMMAND" =~ ^mkdir\  ]] && approve
+fi
+if [[ "$TOOL_NAME" == "Write" ]]; then
+    FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+    # Approve writes to plans directory unconditionally
+    [[ "$FILE_PATH" == *"/plans/"* ]] || [[ "$FILE_PATH" == "./plans/"* ]] && approve
+fi
+
+# For other operations, require ralph-session to be active
 [[ ! -f "$RALPH_STATE_FILE" ]] && pass
 
 # Validate Bash commands with strict pattern matching
