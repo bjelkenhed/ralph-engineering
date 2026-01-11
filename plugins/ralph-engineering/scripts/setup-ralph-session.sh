@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Ralph Loop Setup Script
-# Creates state file for in-session Ralph loop
+# Ralph Session Setup Script
+# Creates state file for in-session Ralph session (single continuous context)
 
 set -euo pipefail
 
 # Get script directory to find template
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE_FILE="$SCRIPT_DIR/../templates/settings.ralph-loop.json"
+TEMPLATE_FILE="$SCRIPT_DIR/../templates/settings.ralph-session.json"
 
 # Parse arguments
 PROMPT_PARTS=()
@@ -21,13 +21,13 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -h|--help)
       cat << 'HELP_EOF'
-Ralph Loop - Interactive self-referential development loop
+Ralph Session - Single continuous context development session
 
 USAGE:
-  /ralph-loop [PROMPT...] [OPTIONS]
+  /ralph-session [PROMPT...] [OPTIONS]
 
 ARGUMENTS:
-  PROMPT...    Initial prompt to start the loop (can be multiple words without quotes)
+  PROMPT...    Initial prompt to start the session (can be multiple words without quotes)
 
 OPTIONS:
   --max-iterations <n>           Maximum iterations before auto-stop (default: 20,
@@ -37,23 +37,26 @@ OPTIONS:
   -h, --help                     Show this help message
 
 DESCRIPTION:
-  Starts a Ralph Wiggum loop in your CURRENT session. The stop hook prevents
+  Starts a Ralph Wiggum session in your CURRENT context. The stop hook prevents
   exit and feeds your output back as input until completion or iteration limit.
+  Context accumulates across iterations (no fresh start).
 
   To signal completion, you must output: <promise>YOUR_PHRASE</promise>
 
   Use this for:
   - Interactive iteration where you want to see progress
   - Tasks requiring self-correction and refinement
-  - Learning how Ralph works
+  - When you want context preserved across iterations
+
+  For fresh context per iteration, use /ralph-loop instead.
 
 EXAMPLES:
-  /ralph-loop Build a todo API --completion-promise 'DONE' --max-iterations 20
-  /ralph-loop --max-iterations 10 Fix the auth bug
-  /ralph-loop Refactor cache layer  (runs forever)
-  /ralph-loop --completion-promise 'TASK COMPLETE' Create a REST API
-  /ralph-loop --prd ./plans/prd.json  (use PRD with default prompt)
-  /ralph-loop --prd NONE Build API  (disable PRD auto-detection)
+  /ralph-session Build a todo API --completion-promise 'DONE' --max-iterations 20
+  /ralph-session --max-iterations 10 Fix the auth bug
+  /ralph-session Refactor cache layer  (runs forever)
+  /ralph-session --completion-promise 'TASK COMPLETE' Create a REST API
+  /ralph-session --prd ./plans/prd.json  (use PRD with default prompt)
+  /ralph-session --prd NONE Build API  (disable PRD auto-detection)
 
 STOPPING:
   Only by reaching --max-iterations or detecting --completion-promise
@@ -61,10 +64,10 @@ STOPPING:
 
 MONITORING:
   # View current iteration:
-  grep '^iteration:' .claude/ralph-loop.local.md
+  grep '^iteration:' .claude/ralph-session.local.md
 
   # View full state:
-  head -10 .claude/ralph-loop.local.md
+  head -10 .claude/ralph-session.local.md
 
   # View progress log:
   cat .claude/ralph-progress.txt
@@ -181,19 +184,19 @@ if [[ -z "$PROMPT" ]]; then
   echo "   Ralph needs a task description to work on." >&2
   echo "" >&2
   echo "   Examples:" >&2
-  echo "     /ralph-loop Build a REST API for todos" >&2
-  echo "     /ralph-loop Fix the auth bug --max-iterations 20" >&2
-  echo "     /ralph-loop --completion-promise 'DONE' Refactor code" >&2
-  echo "     /ralph-loop  (auto-uses ./plans/prd.json if it exists)" >&2
+  echo "     /ralph-session Build a REST API for todos" >&2
+  echo "     /ralph-session Fix the auth bug --max-iterations 20" >&2
+  echo "     /ralph-session --completion-promise 'DONE' Refactor code" >&2
+  echo "     /ralph-session  (auto-uses ./plans/prd.json if it exists)" >&2
   echo "" >&2
-  echo "   For all options: /ralph-loop --help" >&2
+  echo "   For all options: /ralph-session --help" >&2
   exit 1
 fi
 
 # Create state file for stop hook (markdown with YAML frontmatter)
 mkdir -p .claude
 
-# Function to merge ralph-loop permissions into settings.local.json
+# Function to merge ralph-session permissions into settings.local.json
 merge_permissions() {
   local settings_file=".claude/settings.local.json"
   local temp_file
@@ -252,10 +255,10 @@ merge_permissions() {
     return 0
   }
 
-  echo "✅ Auto-approved safe permissions from ralph-loop template"
+  echo "✅ Auto-approved safe permissions from ralph-session template"
 }
 
-# Merge ralph-loop permissions into settings
+# Merge ralph-session permissions into settings
 merge_permissions
 
 # Helper function to escape strings for YAML
@@ -277,7 +280,7 @@ COMPLETION_PROMISE_YAML=$(yaml_escape_string "$COMPLETION_PROMISE")
 # Quote PRD file for YAML with proper escaping
 PRD_FILE_YAML=$(yaml_escape_string "$RESOLVED_PRD_FILE")
 
-cat > .claude/ralph-loop.local.md <<EOF
+cat > .claude/ralph-session.local.md <<EOF
 ---
 active: true
 iteration: 1
@@ -307,7 +310,7 @@ fi
 
 # Output setup message
 cat <<EOF
-🔄 Ralph loop activated in this session!
+🔄 Ralph session activated!
 
 Iteration: 1
 Max iterations: $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo $MAX_ITERATIONS; else echo "unlimited"; fi)
@@ -316,12 +319,13 @@ $(if [[ -n "$PRD_STATUS_MSG" ]]; then echo "$PRD_STATUS_MSG"; fi)
 
 The stop hook is now active. When you try to exit, the SAME PROMPT will be
 fed back to you. You'll see your previous work in files, creating a
-self-referential loop where you iteratively improve on the same task.
+self-referential session where you iteratively improve on the same task.
+Context accumulates across iterations (no fresh start).
 
-To monitor: head -10 .claude/ralph-loop.local.md
+To monitor: head -10 .claude/ralph-session.local.md
 To view progress: cat .claude/ralph-progress.txt
 
-⚠️  WARNING: This loop cannot be stopped manually! It will run infinitely
+⚠️  WARNING: This session cannot be stopped manually! It will run infinitely
     unless you set --max-iterations or --completion-promise.
 
 🔄
@@ -337,25 +341,25 @@ fi
 if [[ "$COMPLETION_PROMISE" != "null" ]]; then
   echo ""
   echo "═══════════════════════════════════════════════════════════"
-  echo "CRITICAL - Ralph Loop Completion Promise"
+  echo "CRITICAL - Ralph Session Completion Promise"
   echo "═══════════════════════════════════════════════════════════"
   echo ""
-  echo "To complete this loop, output this EXACT text:"
+  echo "To complete this session, output this EXACT text:"
   echo "  <promise>$COMPLETION_PROMISE</promise>"
   echo ""
   echo "STRICT REQUIREMENTS (DO NOT VIOLATE):"
   echo "  ✓ Use <promise> XML tags EXACTLY as shown above"
   echo "  ✓ The statement MUST be completely and unequivocally TRUE"
-  echo "  ✓ Do NOT output false statements to exit the loop"
+  echo "  ✓ Do NOT output false statements to exit the session"
   echo "  ✓ Do NOT lie even if you think you should exit"
   echo ""
-  echo "IMPORTANT - Do not circumvent the loop:"
+  echo "IMPORTANT - Do not circumvent the session:"
   echo "  Even if you believe you're stuck, the task is impossible,"
   echo "  or you've been running too long - you MUST NOT output a"
-  echo "  false promise statement. The loop is designed to continue"
+  echo "  false promise statement. The session is designed to continue"
   echo "  until the promise is GENUINELY TRUE. Trust the process."
   echo ""
-  echo "  If the loop should stop, the promise statement will become"
+  echo "  If the session should stop, the promise statement will become"
   echo "  true naturally. Do not force it by lying."
   echo "═══════════════════════════════════════════════════════════"
 fi

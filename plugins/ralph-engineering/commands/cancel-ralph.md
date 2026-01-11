@@ -1,18 +1,18 @@
 ---
-description: "Cancel active Ralph Wiggum loop"
-allowed-tools: ["Bash(test -f .claude/ralph-loop.local.md:*)", "Bash(rm .claude/ralph-loop.local.md)", "Read(.claude/ralph-loop.local.md)"]
+description: "Cancel active Ralph Wiggum session"
+allowed-tools: ["Bash(test -f .claude/ralph-session.local.md:*)", "Bash(rm .claude/ralph-session.local.md)", "Read(.claude/ralph-session.local.md)"]
 hide-from-slash-command-tool: "true"
 ---
 
 # Cancel Ralph
 
-To cancel the Ralph loop:
+To cancel the Ralph session:
 
-1. Check if `.claude/ralph-loop.local.md` exists using Bash: `test -f .claude/ralph-loop.local.md && echo "EXISTS" || echo "NOT_FOUND"`
+1. Check if `.claude/ralph-session.local.md` exists using Bash: `test -f .claude/ralph-session.local.md && echo "EXISTS" || echo "NOT_FOUND"`
 
-2. **If NOT_FOUND**: Say "No active Ralph loop found."
+2. **If NOT_FOUND**: Say "No active Ralph session found."
 
 3. **If EXISTS**:
-   - Read `.claude/ralph-loop.local.md` to get the current iteration number from the `iteration:` field
-   - Remove the file using Bash: `rm .claude/ralph-loop.local.md`
-   - Report: "Cancelled Ralph loop (was at iteration N)" where N is the iteration value
+   - Read `.claude/ralph-session.local.md` to get the current iteration number from the `iteration:` field
+   - Remove the file using Bash: `rm .claude/ralph-session.local.md`
+   - Report: "Cancelled Ralph session (was at iteration N)" where N is the iteration value

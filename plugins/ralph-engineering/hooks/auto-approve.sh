@@ -1,12 +1,12 @@
 #!/bin/bash
-# Ralph Loop PreToolUse Hook - Auto-approves safe commands for autonomous execution
+# Ralph Session PreToolUse Hook - Auto-approves safe commands for autonomous execution
 #
 # SECURITY NOTE: This hook is intentionally restrictive. It validates commands
 # against strict patterns and rejects anything with shell metacharacters.
 
 set -euo pipefail
 
-readonly RALPH_STATE_FILE=".claude/ralph-loop.local.md"
+readonly RALPH_STATE_FILE=".claude/ralph-session.local.md"
 
 # Output functions
 approve() { echo '{"decision": "approve"}'; exit 0; }
@@ -42,9 +42,9 @@ validate_bash_command() {
         vitest\ *|jest\ *) approve ;;
         cargo\ *|make\ *) approve ;;
         python\ [^-c]*|pip\ *|poetry\ *|uv\ *) approve ;;  # python without -c
-        *setup-ralph-loop.sh*) approve ;;
+        *setup-ralph-session.sh*) approve ;;
         rm\ -rf\ *|sudo\ *|curl\ *|wget\ *|eval\ *|exec\ *)
-            deny "Command blocked by ralph-loop safety rules"
+            deny "Command blocked by ralph-session safety rules"
             ;;
         *) pass ;;
     esac

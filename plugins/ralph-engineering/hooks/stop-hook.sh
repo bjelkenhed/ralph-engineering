@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # Ralph Wiggum Stop Hook
-# Prevents session exit when a ralph-loop is active
-# Feeds Claude's output back as input to continue the loop
+# Prevents session exit when a ralph-session is active
+# Feeds Claude's output back as input to continue the session
 
 set -euo pipefail
 
 # Read hook input from stdin (advanced stop hook API)
 HOOK_INPUT=$(cat)
 
-# Check if ralph-loop is active
-RALPH_STATE_FILE=".claude/ralph-loop.local.md"
+# Check if ralph-session is active
+RALPH_STATE_FILE=".claude/ralph-session.local.md"
 RALPH_PROGRESS_FILE=".claude/ralph-progress.txt"
 
 # Helper function to archive progress and clean up state, then exit
@@ -51,7 +51,7 @@ if [[ ! "$ITERATION" =~ ^[0-9]+$ ]]; then
   echo "   Problem: 'iteration' field is not a valid number (got: '$ITERATION')" >&2
   echo "" >&2
   echo "   This usually means the state file was manually edited or corrupted." >&2
-  echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
+  echo "   Ralph session is stopping. Run /ralph-session again to start fresh." >&2
   cleanup_and_exit
 fi
 
@@ -61,7 +61,7 @@ if [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
   echo "   Problem: 'max_iterations' field is not a valid number (got: '$MAX_ITERATIONS')" >&2
   echo "" >&2
   echo "   This usually means the state file was manually edited or corrupted." >&2
-  echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
+  echo "   Ralph session is stopping. Run /ralph-session again to start fresh." >&2
   cleanup_and_exit
 fi
 
@@ -189,7 +189,7 @@ if [[ -z "$PROMPT_TEXT" ]]; then
   echo "     • State file was manually edited" >&2
   echo "     • File was corrupted during writing" >&2
   echo "" >&2
-  echo "   Ralph loop is stopping. Run /ralph-loop again to start fresh." >&2
+  echo "   Ralph session is stopping. Run /ralph-session again to start fresh." >&2
   cleanup_and_exit
 fi
 
