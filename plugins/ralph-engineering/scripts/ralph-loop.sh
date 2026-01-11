@@ -167,6 +167,78 @@ if [[ "$MAX_ITERATIONS_EXPLICIT" == "false" ]] && [[ -n "$RESOLVED_PRD_FILE" ]];
   fi
 fi
 
+# Settings template for permissions
+SETTINGS_TEMPLATE="$SCRIPT_DIR/../templates/settings.ralph-loop.json"
+
+# Function to merge ralph-loop permissions into settings.local.json
+merge_permissions() {
+  local settings_file=".claude/settings.local.json"
+  local temp_file
+
+  # Check if template exists
+  if [[ ! -f "$SETTINGS_TEMPLATE" ]]; then
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: Permissions template not found: $SETTINGS_TEMPLATE" >&2
+    return 0
+  fi
+
+  # Check if jq is available
+  if ! command -v jq &> /dev/null; then
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: jq not installed - cannot merge permissions" >&2
+    return 0
+  fi
+
+  # Validate template has expected structure
+  if ! jq -e '.permissions.allow' "$SETTINGS_TEMPLATE" &>/dev/null; then
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: Template missing .permissions.allow" >&2
+    return 0
+  fi
+
+  # Create .claude directory if needed
+  mkdir -p .claude
+
+  # Create empty settings if file doesn't exist or is invalid
+  if [[ ! -f "$settings_file" ]] || ! jq -e '.permissions.allow' "$settings_file" &>/dev/null; then
+    echo '{"permissions":{"allow":[]}}' > "$settings_file"
+  fi
+
+  # Create temp file for atomic write
+  temp_file="$(mktemp)" || {
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: Failed to create temp file" >&2
+    return 0
+  }
+
+  # Merge permissions arrays and defaultMode
+  if ! jq -s '
+    .[0].permissions.allow as $existing |
+    .[1].permissions.allow as $template |
+    .[1].permissions.defaultMode as $mode |
+    .[0] | .permissions.allow = ($existing + $template | unique) | .permissions.defaultMode = $mode
+  ' "$settings_file" "$SETTINGS_TEMPLATE" > "$temp_file" 2>&1; then
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: Failed to merge permissions" >&2
+    rm -f "$temp_file"
+    return 0
+  fi
+
+  # Validate output is valid JSON
+  if ! jq -e '.permissions.allow' "$temp_file" &>/dev/null; then
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: Merge produced invalid output" >&2
+    rm -f "$temp_file"
+    return 0
+  fi
+
+  # Atomic move
+  mv "$temp_file" "$settings_file" || {
+    [[ "$VERBOSE" == "true" ]] && echo "Warning: Failed to write $settings_file" >&2
+    rm -f "$temp_file"
+    return 0
+  }
+
+  [[ "$VERBOSE" == "true" ]] && echo "Auto-approved permissions for ralph-loop"
+}
+
+# Merge permissions before starting
+merge_permissions
+
 # Create state directory
 mkdir -p .claude
 
