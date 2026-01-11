@@ -40,7 +40,7 @@ validate_bash_command() {
         node\ [^-]*|npx\ *) approve ;;  # node without -e flag
         tsc\ *|eslint\ *|prettier\ *) approve ;;
         vitest\ *|jest\ *) approve ;;
-        cargo\ *|make\ *) approve ;;
+        cargo\ *|make\ *|mkdir\ *) approve ;;
         python\ [^-c]*|pip\ *|poetry\ *|uv\ *) approve ;;  # python without -c
         *setup-ralph-session.sh*) approve ;;
         rm\ -rf\ *|sudo\ *|curl\ *|wget\ *|eval\ *|exec\ *)
