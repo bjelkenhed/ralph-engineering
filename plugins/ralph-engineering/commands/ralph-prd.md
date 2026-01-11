@@ -1,7 +1,7 @@
 ---
 description: "Interactive wizard to generate PRD JSON for feature requirements"
 argument-hint: "[optional project description]"
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-prd.sh *)", "Read", "Write", "Bash(mkdir -p ./plans)"]
+allowed-tools: ["Read", "Write", "Bash(mkdir -p ./plans)"]
 ---
 
 # Ralph PRD - Product Requirements Document Generator
@@ -60,16 +60,6 @@ This approach is based on Anthropic's research on effective harnesses for long-r
 ```
 
 ## Workflow
-
-### Step 0: Setup Permissions
-
-First, run the setup script to auto-approve necessary permissions:
-
-```
-"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-prd.sh" $ARGUMENTS
-```
-
-This ensures `mkdir` and file writes don't prompt for permission.
 
 ### Step 1: Gather Project Context
 

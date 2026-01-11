@@ -20,6 +20,10 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 [[ -z "$TOOL_NAME" ]] && pass
 
 # Always approve safe operations for ralph-prd (even without ralph-session active)
+# Read-only tools are always safe
+case "$TOOL_NAME" in
+    Read|Glob|Grep|LS|Task|TodoWrite) approve ;;
+esac
 if [[ "$TOOL_NAME" == "Bash" ]]; then
     COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
     # Approve mkdir commands unconditionally (safe operation)
