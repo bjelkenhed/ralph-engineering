@@ -6,9 +6,13 @@
 
 set -euo pipefail
 
+# Store original arguments for background spawning
+ORIGINAL_ARGS=("$@")
+
 # Get script directory to find templates
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROMPT_TEMPLATE="$SCRIPT_DIR/../templates/ralph-loop-prompt.md"
+ARCHITECTURE_FILE="$SCRIPT_DIR/../templates/architecture.md"
 
 # State files
 STATE_FILE=".claude/ralph-loop-state.json"
@@ -21,6 +25,7 @@ MAX_ITERATIONS_EXPLICIT=false
 COMPLETION_PROMISE="COMPLETE"
 PRD_FILE="auto"
 VERBOSE=false
+FOREGROUND=false
 
 # Parse options and positional arguments
 while [[ $# -gt 0 ]]; do
@@ -41,11 +46,16 @@ OPTIONS:
   --completion-promise '<text>'  Promise phrase (default: COMPLETE)
   --prd <file|NONE>              PRD file path (default: auto-detect ./plans/prd.json)
   --verbose                      Show detailed output from each iteration
+  --foreground                   Run in foreground (blocking mode, subject to timeout)
   -h, --help                     Show this help message
 
 DESCRIPTION:
   Runs Claude in an external loop where each iteration gets FRESH context.
   This follows Anthropic's recommended pattern for long-running agents.
+
+  By default, runs in BACKGROUND mode to avoid timeout limits. The command
+  returns immediately with monitoring instructions. Use --foreground for
+  blocking mode (subject to 10-minute timeout).
 
   Each iteration:
   1. Starts a new Claude session (claude -p)
@@ -104,6 +114,10 @@ HELP_EOF
       ;;
     --verbose)
       VERBOSE=true
+      shift
+      ;;
+    --foreground)
+      FOREGROUND=true
       shift
       ;;
     *)
@@ -214,45 +228,35 @@ build_iteration_prompt() {
     recent_progress=$(tail -30 "$PROGRESS_FILE")
   fi
 
-  # Build the full prompt
-  cat <<EOF
-# Ralph Loop - Iteration $iteration of $MAX_ITERATIONS
+  # Read template
+  local template
+  template=$(<"$PROMPT_TEMPLATE")
 
-## Your Mission
-You are continuing work on a multi-iteration project. Each iteration runs with
-fresh context, so you must re-orient yourself using the files below.
+  # Substitute variables
+  template="${template//\{\{iteration\}\}/$iteration}"
+  template="${template//\{\{max_iterations\}\}/$MAX_ITERATIONS}"
+  template="${template//\{\{prd_file\}\}/$RESOLVED_PRD_FILE}"
+  template="${template//\{\{original_prompt\}\}/$PROMPT}"
+  template="${template//\{\{prd_passing\}\}/$prd_passing}"
+  template="${template//\{\{prd_total\}\}/$prd_total}"
+  template="${template//\{\{completion_promise\}\}/$COMPLETION_PROMISE}"
+  template="${template//\{\{recent_progress\}\}/$recent_progress}"
+  template="${template//\{\{architecture_file\}\}/$ARCHITECTURE_FILE}"
 
-## Getting Oriented (DO THIS FIRST)
-1. Read \`.claude/ralph-progress.txt\` for previous iteration summaries
-2. Run \`git log --oneline -10\` to see recent commits
-$(if [[ -n "$RESOLVED_PRD_FILE" ]]; then echo "3. Read the PRD at \`$RESOLVED_PRD_FILE\` to see feature status"; fi)
+  # Handle PRD conditionals
+  if [[ -n "$RESOLVED_PRD_FILE" ]]; then
+    # Remove if_prd markers, keep content
+    template=$(echo "$template" | sed 's/{{#if_prd}}//g; s/{{\/if_prd}}//g')
+    # Remove if_no_prd blocks entirely
+    template=$(echo "$template" | sed '/{{#if_no_prd}}/,/{{\/if_no_prd}}/d')
+  else
+    # Remove if_no_prd markers, keep content
+    template=$(echo "$template" | sed 's/{{#if_no_prd}}//g; s/{{\/if_no_prd}}//g')
+    # Remove if_prd blocks entirely
+    template=$(echo "$template" | sed '/{{#if_prd}}/,/{{\/if_prd}}/d')
+  fi
 
-## Current State
-- Iteration: $iteration of $MAX_ITERATIONS
-$(if [[ -n "$RESOLVED_PRD_FILE" ]]; then echo "- PRD Features: $prd_passing/$prd_total passing"; fi)
-
-## Your Task
-$PROMPT
-
-## Rules
-1. Work on ONE feature per iteration
-2. Run \`pnpm typecheck && pnpm test\` before completing (if applicable)
-3. Commit your work with \`git commit -m "feat: ..."\`
-$(if [[ -n "$RESOLVED_PRD_FILE" ]]; then echo "4. Update PRD: set \`passes: true\` for completed feature"; fi)
-5. End with a <progress> summary of what you accomplished
-
-## Progress from Previous Iterations
-$recent_progress
-
-## Completion
-$(if [[ -n "$RESOLVED_PRD_FILE" ]]; then
-  echo "When ALL PRD features pass, output: <promise>$COMPLETION_PROMISE</promise>"
-else
-  echo "When the task is complete, output: <promise>$COMPLETION_PROMISE</promise>"
-fi)
-
-IMPORTANT: Only output the promise when it is GENUINELY TRUE.
-EOF
+  echo "$template"
 }
 
 # Extract progress from output
@@ -275,6 +279,37 @@ check_completion() {
 
 # Main loop
 main() {
+  # Background mode: spawn self with --foreground and exit
+  if [[ "$FOREGROUND" != "true" ]]; then
+    LOG_FILE=".claude/ralph-loop.log"
+    mkdir -p .claude
+
+    # Re-run with original args plus --foreground
+    nohup setsid "$0" "${ORIGINAL_ARGS[@]}" --foreground > "$LOG_FILE" 2>&1 &
+    BG_PID=$!
+    echo "$BG_PID" > .claude/ralph-loop.pid
+
+    echo "========================================"
+    echo " Ralph Loop Started (Background)"
+    echo "========================================"
+    echo ""
+    echo "PID: $BG_PID"
+    echo ""
+    echo "Monitor:"
+    echo "  tail -f .claude/ralph-loop.log"
+    echo ""
+    echo "Check progress:"
+    echo "  cat .claude/ralph-progress.txt"
+    echo ""
+    echo "Check state:"
+    echo "  cat .claude/ralph-loop-state.json"
+    echo ""
+    echo "Stop:"
+    echo "  kill \$(cat .claude/ralph-loop.pid)"
+    echo ""
+    exit 0
+  fi
+
   echo "========================================"
   echo " Ralph Loop - Fresh Context Per Iteration"
   echo "========================================"

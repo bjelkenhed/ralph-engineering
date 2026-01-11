@@ -41,6 +41,7 @@ This approach is based on Anthropic's research on effective harnesses for long-r
 {
   "name": "Project or feature name",
   "description": "Brief description of what is being built",
+  "architecture": "${CLAUDE_PLUGIN_ROOT}/templates/architecture.md",
   "generated_at": "ISO 8601 timestamp",
   "features": [
     {
@@ -181,6 +182,7 @@ If the user wants changes:
 {
   "name": "Todo List Application",
   "description": "A simple todo list app with user authentication and task management",
+  "architecture": "${CLAUDE_PLUGIN_ROOT}/templates/architecture.md",
   "generated_at": "2024-01-15T10:30:00Z",
   "features": [
     {

@@ -16,6 +16,24 @@ Execute the loop script to start the external orchestrator:
 This command runs Claude in a loop where each iteration gets **fresh context**.
 This follows Anthropic's recommended pattern for long-running agents.
 
+By default, runs in **background mode** to avoid timeout limits. The command returns immediately with monitoring instructions.
+
+## Background Mode (Default)
+
+When you run `/ralph-loop`, it:
+1. Spawns a background process that runs independently
+2. Returns immediately with PID and monitoring instructions
+3. Writes output to `.claude/ralph-loop.log`
+4. Stores PID in `.claude/ralph-loop.pid`
+
+**Monitoring:**
+- `tail -f .claude/ralph-loop.log` - Watch live output
+- `cat .claude/ralph-progress.txt` - See iteration summaries
+- `cat .claude/ralph-loop-state.json` - Check current state
+- `kill $(cat .claude/ralph-loop.pid)` - Stop the loop
+
+**Foreground mode:** Use `--foreground` to run in blocking mode (subject to 10-minute timeout).
+
 ## How It Works
 
 Unlike `/ralph-session` (which keeps the same context), `/ralph-loop`:
