@@ -1,7 +1,7 @@
 ---
 description: "Interactive wizard to generate PRD JSON for feature requirements"
 argument-hint: "[optional project description]"
-allowed-tools: ["Read", "Write", "Bash(mkdir -p ./plans)"]
+allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-prd.sh *)", "Read", "Write", "Bash(mkdir -p ./plans)"]
 ---
 
 # Ralph PRD - Product Requirements Document Generator
@@ -61,7 +61,37 @@ This approach is based on Anthropic's research on effective harnesses for long-r
 
 ## Workflow
 
+### Step 0: Setup Permissions
+
+First, run the setup script to auto-approve necessary permissions:
+
+```
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-ralph-prd.sh" $ARGUMENTS
+```
+
+This ensures `mkdir` and file writes don't prompt for permission.
+
 ### Step 1: Gather Project Context
+
+**Greenfield Detection**: First, check if this is a greenfield project (no existing app/code):
+- Look for project files: `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `composer.json`, `Gemfile`, `pom.xml`
+- If none exist, this is a greenfield project
+
+If greenfield, you MUST include a "Project Setup" feature as `feat_001` in the generated PRD:
+```json
+{
+  "id": "feat_001",
+  "category": "functional",
+  "description": "Project is initialized with the recommended technology stack",
+  "steps": [
+    "Run the project initialization command (e.g., npx create-next-app@latest)",
+    "Verify package.json exists with correct dependencies",
+    "Verify the dev server starts without errors",
+    "Verify the app renders the default page in the browser"
+  ],
+  "passes": false
+}
+```
 
 If an argument was provided (`$ARGUMENTS`), use it as the initial project description:
 "I'll help you create a PRD for: $ARGUMENTS"
