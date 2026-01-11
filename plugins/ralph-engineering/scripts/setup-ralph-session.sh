@@ -230,11 +230,12 @@ merge_permissions() {
     return 0
   }
 
-  # Merge permissions arrays (remove duplicates)
+  # Merge permissions arrays and defaultMode
   if ! jq -s '
     .[0].permissions.allow as $existing |
     .[1].permissions.allow as $template |
-    .[0] | .permissions.allow = ($existing + $template | unique)
+    .[1].permissions.defaultMode as $mode |
+    .[0] | .permissions.allow = ($existing + $template | unique) | .permissions.defaultMode = $mode
   ' "$settings_file" "$TEMPLATE_FILE" > "$temp_file" 2>&1; then
     echo "⚠️  Warning: Failed to merge permissions" >&2
     rm -f "$temp_file"
