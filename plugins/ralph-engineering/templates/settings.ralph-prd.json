@@ -3,6 +3,9 @@
     "allow": [
       "Bash(mkdir *)",
       "Read(**/*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(.env.local)",
       "Write(**/*)",
       "Write(./plans/*)",
       "Write(./plans/prd.json)"
