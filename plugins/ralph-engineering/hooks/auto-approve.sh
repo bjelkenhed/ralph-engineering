@@ -28,7 +28,7 @@ fi
 if [[ "$TOOL_NAME" == "Write" ]]; then
     FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
     # Approve writes to plans directory unconditionally
-    [[ "$FILE_PATH" == *"/plans/"* ]] || [[ "$FILE_PATH" == "./plans/"* ]] && approve
+    [[ "$FILE_PATH" == *"/plans/"* ]] || [[ "$FILE_PATH" == "./plans/"* ]] || [[ "$FILE_PATH" == "plans/"* ]] && approve
 fi
 
 # For other operations, require ralph-session to be active
